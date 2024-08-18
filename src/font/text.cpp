@@ -292,7 +292,29 @@ point pango_text::get_column_line(const point& position) const
 	pango_layout_xy_to_index(layout_.get(), position.x * PANGO_SCALE,
 		position.y * PANGO_SCALE, &index, &trailing);
 
-	return get_cursor_pos_from_index(index);
+	// Extract the line and the offset in pixels in that line.
+	int line, offset;
+	pango_layout_index_to_line_x(layout_.get(), index, trailing, &line, &offset);
+	offset = PANGO_PIXELS(offset);
+
+	// Now convert this offset to a column, this way is a bit hacky but haven't
+	// found a better solution yet.
+
+	/**
+	 * @todo There's still a bug left. When you select a text which is in the
+	 * ellipses on the right side the text gets reformatted with ellipses on
+	 * the left and the selected character is not the one under the cursor.
+	 * Other widget toolkits don't show ellipses and have no indication more
+	 * text is available. Haven't found what the best thing to do would be.
+	 * Until that time leave it as is.
+	 */
+	for(std::size_t i = 0; ; ++i) {
+		const int pos = this->get_cursor_position(i, line).x;
+
+		if(pos == offset) {
+			return  point(i, line);
+		}
+	}
 }
 
 void pango_text::add_attribute_size(const unsigned start_offset, const unsigned end_offset, int size)
